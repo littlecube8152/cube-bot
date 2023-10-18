@@ -19,11 +19,12 @@ async def hello(ctx, name: str = None):
     await ctx.respond(f"Hello {name}!")
 
 @bot.slash_command()
-async def botstat(ctx, name: discord.Option(discord.SlashCommandOptionType.user)):
+async def botstat(ctx):
     await ctx.respond(f"WIP")
 
 def main():
     load_token()
+    print(f"Running bot on token {token[:5]}...{token[-5:]}")
     bot.run(token)
 
 if __name__ == '__main__':
