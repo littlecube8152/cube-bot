@@ -26,7 +26,7 @@ def lazy_embed(title, color, section_list = {}, description = None, inline = Tru
         timestamp=datetime.datetime.now()
     )
 
-    for section, content in section_list:
+    for section, content in section_list.items():
         embed.add_field(name=section, value=content, inline=inline)
         
     embed.set_author(name=bot.user.display_name, icon_url=bot.user.display_avatar.url)
