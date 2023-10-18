@@ -94,23 +94,14 @@ async def botstat(ctx):
     await ctx.respond(embed=embed)
 
 @bot.slash_command()
-async def get_name(ctx, student_id: str = None):
+async def get_name(ctx, student_id: str = ""):
     """
     Get a given name of id by ldap on workstation.
     """
-    embed = discord.Embed (
-        title="Bot Status",
-        color=discord.Colour.dark_blue(),
-        timestamp=datetime.datetime.now()
-    )
-    embed = discord.Embed (
-        title="Bot Status",
-        color=discord.Colour.dark_blue(),
-        timestamp=datetime.datetime.now()
-    )
+    
     if re.match(r"^[br][0-9]{8}$", student_id):
-        res = subprocess.run(["gn", student_id], capture_output=True)
-        print(f"Query {student_id}: exit code {res.returncode}, stderr {res.stderr}, stdout {res.stdout}")
+        res = subprocess.run(["getName", student_id], capture_output=True)
+        print(f"Query {student_id}: exit code {res.returncode}, stderr {res.stderr}, stdout {res.stdout}", flush=True)
 
         if res.returncode != 0:
             await ctx.respond(f"Error! Process exited with code `{res.returncode}`")
