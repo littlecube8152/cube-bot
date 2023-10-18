@@ -101,13 +101,13 @@ async def get_name(ctx, student_id: str = ""):
     
     if re.match(r"^[br][0-9]{8}$", student_id):
         res = subprocess.run(["getName", student_id], capture_output=True)
-        print(f"Query {student_id}: exit code {res.returncode}, stderr {res.stderr}, stdout {res.stdout}", flush=True)
+        print(f"Query {student_id}: exit code {res.returncode}, stderr {res.stderr.decode()}, stdout {res.stdout}", flush=True)
 
         if res.returncode != 0:
             await ctx.respond(f"Error! Process exited with code `{res.returncode}`")
         else:
-            name = "Not found" if res.stdout == b"" else res.stdout.decode()
-            await ctx.respond(f"`{student_id}` → `{name}`")
+            name = "Not found" if res.stdout == b"\n" else f"`{res.stdout.decode()}`"
+            await ctx.respond(f"`{student_id}` → {name}")
     else:
         await ctx.respond(f"Error! ID is not valid.")
 
