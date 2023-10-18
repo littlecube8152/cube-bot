@@ -3,6 +3,8 @@ import psutil
 import discord
 import datetime
 import math
+import subprocess
+import re
 
 token = ""
 bot = discord.Bot()
@@ -14,6 +16,23 @@ def load_token():
     token_file = open('config.json')
     token = json.load(token_file)['token']
     token_file.close()
+
+def lazy_embed(title, color, section_list = {}, description = None, inline = True):
+
+    embed = discord.Embed (
+        title=title,
+        description=description,
+        color=color,
+        timestamp=datetime.datetime.now()
+    )
+
+    for section, content in section_list:
+        embed.add_field(name=section, value=content, inline=inline)
+        
+    embed.set_author(name=bot.user.display_name, icon_url=bot.user.display_avatar.url)
+
+    return embed
+
 
 @bot.slash_command()
 async def hello(ctx, name: str = None):
@@ -39,7 +58,6 @@ def convert_time(t):
             second = round(t / ratio[i - 1])
             return "%d%s %d%s" % (first, unit[i], second, unit[i - 1])
 
-
 @bot.slash_command()
 async def botstat(ctx):
 
@@ -53,25 +71,55 @@ async def botstat(ctx):
         uss = meminfo.uss
         nice = bot_process.nice()
         
-    
     total_cpu = psutil.cpu_count()
     total_mem = psutil.virtual_memory().total
 
+    embed = lazy_embed("Bot Status",
+                       discord.Colour.dark_blue(),
+                       section_list=
+                       {"CPU": 
+                            f"`{cpu} / {total_cpu}`",
+                        "Threads": 
+                            f"`{threads}`",
+                        "Uptime": 
+                            f"`{convert_time((datetime.datetime.now() - start_time).total_seconds())}`",
+                        "Nice": 
+                            f"`{nice}`",
+                        "Memory (RSS, VMS, USS)": 
+                            f"`{convert_bytes(rss)}, {convert_bytes(vms)}, {convert_bytes(uss)} / {convert_bytes(total_mem)}`",
+                        "Latency":
+                            f"`{bot.latency * 1000:.2f}ms`"
+                        })
     
+    await ctx.respond(embed=embed)
+
+@bot.slash_command()
+async def get_name(ctx, student_id: str = None):
+    """
+    Get a given name of id by ldap on workstation.
+    """
     embed = discord.Embed (
         title="Bot Status",
         color=discord.Colour.dark_blue(),
         timestamp=datetime.datetime.now()
     )
-    embed.add_field(name="CPU", value=f"`{cpu} / {total_cpu}`", inline=True)
-    embed.add_field(name="Threads", value=f"`{threads}`", inline=True)
-    embed.add_field(name="Uptime", value=f"`{convert_time((datetime.datetime.now() - start_time).total_seconds())}`", inline=True)
-    embed.add_field(name="Nice", value=f"`{nice}`", inline=True)
-    embed.add_field(name="Memory (RSS, VMS, USS)", value=f"`{convert_bytes(rss)}, {convert_bytes(vms)}, {convert_bytes(uss)} / {convert_bytes(total_mem)}`", inline=True)
-    embed.add_field(name="Latency", value=f"`{bot.latency * 1000:.2f}ms`", inline=True)
-    embed.set_author(name=bot.user.display_name, icon_url=bot.user.display_avatar.url)
+    embed = discord.Embed (
+        title="Bot Status",
+        color=discord.Colour.dark_blue(),
+        timestamp=datetime.datetime.now()
+    )
+    if re.match(r"^[br][0-9]{8}$", student_id):
+        res = subprocess.run(["gn", student_id], capture_output=True)
+        print(f"Query {student_id}: exit code {res.returncode}, stderr {res.stderr}, stdout {res.stdout}")
 
-    await ctx.respond(embed=embed)
+        if res.returncode != 0:
+            await ctx.respond(f"Error! Process exited with code `{res.returncode}`")
+        else:
+            name = "Not found" if res.stdout == b"" else res.stdout.decode()
+            await ctx.respond(f"`{student_id}` → `{name}`")
+    else:
+        await ctx.respond(f"Error! ID is not valid.")
+
 
 def main():
     load_token()
