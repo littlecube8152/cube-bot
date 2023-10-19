@@ -34,21 +34,23 @@ class VimSwapFileFinder:
             scriptfile.flush()
 
         except:
-            print("Cannot capture swap file: tempfile cannot be created")
+            print(f"Cannot capture swap file {filename}: tempfile cannot be created", flush=True)
 
         finally:
             try:
-                vim = subprocess.run([f'vim', '-r', filename, '-s', scriptfile.name])
+                vim = subprocess.run([f'vim', '-r', filename, '-s', scriptfile.name], timeout=10)
             
                 if vim.returncode == 0:
                     content = capturefile.read()
+                    print(f"vim recover failed. Maybe the file is not valid or the script is not working. Swap file {filename}", flush=True)
+
                 else:
                     content = None
 
             except subprocess.TimeoutExpired:
-                print(f"vim session timeout. Maybe the file is too large or the script is not working. Swap file {filename}")
+                print(f"vim session timeout. Maybe the file is too large or the script is not working. Swap file {filename}", flush=True)
                 content = None
-                
+
             scriptfile.close()
             capturefile.close()
 
