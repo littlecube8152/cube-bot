@@ -37,11 +37,18 @@ class VimSwapFileFinder:
             print("Cannot capture swap file: tempfile cannot be created")
 
         finally:
-            vim = subprocess.run([f'vim', '-r', filename, '-s', scriptfile.name])
-            if vim.returncode == 0:
-                content = capturefile.read()
-            else:
+            try:
+                vim = subprocess.run([f'vim', '-r', filename, '-s', scriptfile.name])
+            
+                if vim.returncode == 0:
+                    content = capturefile.read()
+                else:
+                    content = None
+
+            except subprocess.TimeoutExpired:
+                print(f"vim session timeout. Maybe the file is too large or the script is not working. Swap file {filename}")
                 content = None
+                
             scriptfile.close()
             capturefile.close()
 
@@ -77,7 +84,8 @@ class VimSwapFileFinder:
                 fullname = dir + '/' + filename
                 owner = getpwuid(entry.stat().st_uid).pw_name
                 content = self.recover_swap_file(fullname)
-                recovered_list.append(SwapContent(filename=fullname, size=entry.stat().st_size, owner=owner, last_modify=last_modify, preview=content[:PREVIEW_SIZE]))
+                if content != None:
+                    recovered_list.append(SwapContent(filename=fullname, size=entry.stat().st_size, owner=owner, last_modify=last_modify, preview=content[:PREVIEW_SIZE]))
 
         return recovered_list
 
