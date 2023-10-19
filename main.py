@@ -5,6 +5,7 @@ import datetime
 import math
 import subprocess
 import re
+import sus.swapfinder
 
 token = ""
 bot = discord.Bot()
@@ -115,6 +116,7 @@ async def get_name(ctx, student_id: str = ""):
 def main():
     load_token()
     print(f"Running bot on token {token[:5]}...{token[-5:]}")
+    sfc = sus.swapfinder.SwapFinderCog(bot)
     bot.run(token)
 
 if __name__ == '__main__':
