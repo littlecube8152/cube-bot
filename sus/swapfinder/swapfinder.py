@@ -31,6 +31,7 @@ class VimSwapFileFinder:
         try:
             scriptfile = tempfile.NamedTemporaryFile(mode='w+')
             capturefile = tempfile.NamedTemporaryFile(mode='w+')
+            FNULL = open(os.devnull, 'w')
             scriptfile.write(f":w! {capturefile.name}\n:q!\n")
             scriptfile.flush()
 
@@ -39,7 +40,7 @@ class VimSwapFileFinder:
 
         finally:
             try:
-                vim = subprocess.Popen([f'vim', '-r', filename, '-s', scriptfile.name])
+                vim = subprocess.Popen([f'vim', '-r', filename, '-s', scriptfile.name], stderr=subprocess.STDOUT, stdout=FNULL)
                 vim.wait(10)
 
                 if vim.returncode == 0:

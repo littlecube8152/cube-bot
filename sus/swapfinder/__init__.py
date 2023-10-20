@@ -1,7 +1,6 @@
 from sus.swapfinder.swapfinder import *
 from sus.basiclib import *
 from discord.ext import tasks, commands
-from discord import client
 import time
 
 SCAN_PATH = '/tmp'
@@ -39,5 +38,5 @@ class SwapFinderCog(commands.Cog):
             time.sleep(0.200) # sleep 0.2s to prevent too much input
 
     @prober.before_loop
-    async def before_printer(self):
+    async def before_prober(self):
         await self.bot.wait_until_ready()
