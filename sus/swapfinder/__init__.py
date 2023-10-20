@@ -16,6 +16,19 @@ class SwapFinderCog(commands.Cog):
     def cog_unload(self):
         self.prober.cancel()
 
+    @commands.slash_command()
+    async def scan_tmp(self, ctx):
+        """
+        Perform a scan.
+        """
+        channel = self.bot.get_channel(REPORT_CHANNEL_ID)
+        flist = self.sf.scan_directory(SCAN_PATH)
+        self.sf.update_time()
+        await ctx.respond(f"Found {len(flist)} unprotected edit.")
+        for filename, size, owner, last_modify, preview in flist:
+            await channel.send(f'`{owner}` did some unprotected edit with swap file `{filename}` (size `{convert_bytes(size)}`) at time `{str(last_modify)}`:\n```{preview}```')
+            time.sleep(0.200) # sleep 0.2s to prevent too much input
+
     @tasks.loop(minutes=5.0)
     async def prober(self):
         channel = self.bot.get_channel(REPORT_CHANNEL_ID)
