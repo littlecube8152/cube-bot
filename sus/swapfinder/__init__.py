@@ -1,10 +1,12 @@
 from sus.swapfinder.swapfinder import *
 from sus.basiclib import *
-from discord.ext import tasks, commands
+from sus.idfinder import StudentIDFinder as sidf
+from discord.ext  import tasks, commands
 import time
 
 SCAN_PATH = '/tmp'
 REPORT_CHANNEL_ID = 1164606072024207450
+MAX_PREVIEW_SIZE = 1024 * 1024 * 8   # 8 MB
 
 class SwapFinderCog(commands.Cog):
     def __init__(self, bot):
@@ -21,11 +23,12 @@ class SwapFinderCog(commands.Cog):
         Perform a scan.
         """
         channel = self.bot.get_channel(REPORT_CHANNEL_ID)
-        flist = self.sf.scan_directory(SCAN_PATH)
+        flist = self.sf.scan_directory(SCAN_PATH, True)
         self.sf.update_time()
         await ctx.respond(f"Found {len(flist)} unprotected edit.")
         for filename, size, owner, last_modify, preview in flist:
-            await channel.send(f'`{owner}` did some unprotected edit with swap file `{filename}` (size `{convert_bytes(size)}`) at time `{str(last_modify)}`:\n```{preview}```')
+            await channel.send(f'`{owner}` did some unprotected edit with swap file `{filename}` (size `{convert_bytes(size)}`) at time `{str(last_modify)}`:', file=preview.name)
+            preview.close()
             time.sleep(0.200) # sleep 0.2s to prevent too much input
 
     @tasks.loop(minutes=5.0)
@@ -34,7 +37,7 @@ class SwapFinderCog(commands.Cog):
         flist = self.sf.scan_directory(SCAN_PATH)
         self.sf.update_time()
         for filename, size, owner, last_modify, preview in flist:
-            await channel.send(f'`{owner}` did some unprotected edit with swap file `{filename}` (size `{convert_bytes(size)}`) at time `{str(last_modify)}`:\n```{preview}```')
+            await channel.send(f'`{owner}`(``) did some unprotected edit with swap file `{filename}` (size `{convert_bytes(size)}`) at time `{str(last_modify)}`:\n```{preview}```')
             time.sleep(0.200) # sleep 0.2s to prevent too much input
 
     @prober.before_loop

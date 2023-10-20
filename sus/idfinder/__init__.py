@@ -27,14 +27,17 @@ class StudentIDFinder:
         
         return res.stdout.decode()
     
+    @classmethod
     def query_id(cls, student_id):
         """
-        Same as `raw_query_id` but does not raise exception.
+        Same as `raw_query_id` but returns '' if the id is invaid or does not exist.
         """
         try:
             name = cls.raw_query_id(student_id)
         except cls.InvalidIDError:
-            return None
+            return ''
+        if name == None:
+            name = ''
         return name
 
 class StudentIDCog(commands.Cog):
