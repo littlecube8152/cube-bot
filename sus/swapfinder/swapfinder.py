@@ -38,8 +38,9 @@ class VimSwapFileFinder:
 
         finally:
             try:
-                vim = subprocess.run([f'vim', '-r', filename, '-s', scriptfile.name], timeout=10)
-            
+                vim = subprocess.Popen([f'vim', '-r', filename, '-s', scriptfile.name])
+                vim.wait(10)
+
                 if vim.returncode == 0:
                     content = capturefile.read()
                     print(f"vim recovered. Swap file {filename}", flush=True)
