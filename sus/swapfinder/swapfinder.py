@@ -69,7 +69,7 @@ class VimSwapFileFinder:
             for entry in dir_entries:
 
                 # detect file
-                if entry.is_file(follow_symlinks=False):
+                if not entry.is_file(follow_symlinks=False):
                     continue
 
                 # detect readable
