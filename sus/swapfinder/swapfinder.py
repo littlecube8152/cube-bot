@@ -67,13 +67,14 @@ class VimSwapFileFinder:
         recovered_list = []
         with os.scandir(dir) as dir_entries:
             for entry in dir_entries:
-                # detect readable
-                st_mode = entry.lstat().st_mode
-                if not st_mode & (stat.S_IRGRP):
+
+                # detect file
+                if entry.is_file(follow_symlinks=False):
                     continue
 
-                # detect only file
-                if not stat.S_ISREG(st_mode):
+                # detect readable
+                st_mode = entry.stat(follow_symlinks=False).st_mode
+                if not st_mode & (stat.S_IRGRP):
                     continue
                 
                 # detect valid file name
