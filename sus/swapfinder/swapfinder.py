@@ -65,7 +65,7 @@ class VimSwapFileFinder:
         capturefile.close()
         return content
     
-    def scan_with_callback(self, dir: string, callback: function, autoclose: bool = True):
+    def scan_with_callback(self, dir: string, callback, autoclose: bool = True):
         """
         Scan a given dir for newly created swap file.
         `dir` should not end with '/'.
