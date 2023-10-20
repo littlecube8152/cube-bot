@@ -25,7 +25,7 @@ class StudentIDFinder:
         if res.stdout == b"\n": # catch no entry
             return None
         
-        return res.stdout.decode()
+        return res.stdout.decode()[:-1] # escape newline
     
     @classmethod
     def query_id(cls, student_id):
