@@ -6,6 +6,7 @@ import re
 import subprocess
 import string
 import tempfile
+import stat
 
 MAX_FILE_SIZE = 1024 * 1024 * 64 # 64 MB
 PREVIEW_SIZE = 400
@@ -66,6 +67,9 @@ class VimSwapFileFinder:
         recovered_list = []
         with os.scandir(dir) as dir_entries:
             for entry in dir_entries:
+                if not entry.stat().st_mode & (1 << 5):
+                    continue
+                
                 # detect only file
                 if not entry.is_file():
                     continue
