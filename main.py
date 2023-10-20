@@ -2,10 +2,10 @@ import json
 import psutil
 import discord
 import datetime
-import math
 import subprocess
 import re
 import sus.swapfinder
+import sus.idfinder
 from   sus.basiclib import *
 
 token = ""
@@ -78,29 +78,19 @@ async def botstat(ctx):
     
     await ctx.respond(embed=embed)
 
-@bot.slash_command()
-async def get_name(ctx, student_id: str = ""):
-    """
-    Get a given name of id by ldap on workstation.
-    """
-    
-    if re.match(r"^[br][0-9]{8}$", student_id):
-        res = subprocess.run(["getName", student_id], capture_output=True)
-        print(f"Query {student_id}: exit code {res.returncode}, stderr {res.stderr.decode()}, stdout {res.stdout}", flush=True)
 
-        if res.returncode != 0:
-            await ctx.respond(f"Error! Process exited with code `{res.returncode}`")
-        else:
-            name = "Not found" if res.stdout == b"\n" else f"`{res.stdout.decode()}`"
-            await ctx.respond(f"`{student_id}` → {name}")
-    else:
-        await ctx.respond(f"Error! ID is not valid.")
+def load_module(module: discord.Cog):
+    print(f"Load module {module.__cog_name__}...")
+    bot.add_cog(module(bot))
+    for c in module.get_commands(module):
+        print(f"Registered command {c.name}")
 
 
 def main():
     load_token()
+    load_module(sus.swapfinder.SwapFinderCog)
+    load_module(sus.idfinder.StudentIDCog)
     print(f"Running bot on token {token[:5]}...{token[-5:]}")
-    sfc = sus.swapfinder.SwapFinderCog(bot)
     bot.run(token)
 
 if __name__ == '__main__':
