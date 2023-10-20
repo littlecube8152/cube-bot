@@ -13,7 +13,7 @@ SwapContent = namedtuple('SwapContent', ['filename', 'size', 'owner', 'last_modi
 
 class VimSwapFileFinder:
     def __init__(self):
-        self.last_check = datetime.datetime.now() - 86400
+        self.last_check = datetime.datetime.now() - datetime.timedelta(hours=1)
 
     def update_time(self):
         self.last_check = datetime.datetime.now()
