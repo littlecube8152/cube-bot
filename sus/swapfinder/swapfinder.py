@@ -13,7 +13,7 @@ SwapContent = namedtuple('SwapContent', ['filename', 'size', 'owner', 'last_modi
 
 class VimSwapFileFinder:
     def __init__(self):
-        self.last_check = datetime.datetime.now()
+        self.last_check = datetime.datetime.now() - 86400
 
     def update_time(self):
         self.last_check = datetime.datetime.now()
@@ -42,9 +42,9 @@ class VimSwapFileFinder:
             
                 if vim.returncode == 0:
                     content = capturefile.read()
-                    print(f"vim recover failed. Maybe the file is not valid or the script is not working. Swap file {filename}", flush=True)
-
+                    print(f"vim recovered. Swap file {filename}", flush=True)
                 else:
+                    print(f"vim recover failed. Maybe the file is not valid or the script is not working. Swap file {filename}", flush=True)
                     content = None
 
             except subprocess.TimeoutExpired:
