@@ -37,7 +37,7 @@ class SwapFinderCog(commands.Cog):
         flist = self.sf.scan_directory(SCAN_PATH)
         self.sf.update_time()
         for filename, size, owner, last_modify, preview in flist:
-            await channel.send(f'`{owner}`(``) did some unprotected edit with swap file `{filename}` (size `{convert_bytes(size)}`) at time `{str(last_modify)}`:\n```{preview}```')
+            await channel.send(f'`{owner}`({sidf.query_id(owner)}) did some unprotected edit with swap file `{filename}` (size `{convert_bytes(size)}`) at time `{str(last_modify)}`:\n```{preview}```')
             time.sleep(0.200) # sleep 0.2s to prevent too much input
 
     @prober.before_loop
