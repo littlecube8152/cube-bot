@@ -44,6 +44,22 @@ async def hello(ctx, name: str = None):
     await ctx.respond(f"Hello {name}!")
 
 @bot.slash_command()
+async def delete(ctx: discord.ApplicationContext, count: int = 0):
+    """
+    Delete messages.
+    """
+    if ctx.author.id == 582151572646133770:
+        reply = await ctx.respond(f"Deleting...", ephemeral=True)
+        deleted = 0
+        async for msg in ctx.channel.history(limit=count, before=ctx.message):
+            deleted += 1
+            await msg.delete()
+        await reply.edit_original_response(content=f"Deleted **{deleted}** message(s). Shhhh!", delete_after=5.0)
+    else:
+        await ctx.respond(f"You don't have permission to invoke this dangerous command.", ephemeral=True, delete_after=5.0)
+
+
+@bot.slash_command()
 async def botstat(ctx):
 
     bot_process = psutil.Process()
