@@ -16,8 +16,8 @@ class VimSwapFileFinder:
     def __init__(self):
         self.last_check = datetime.datetime.now() - datetime.timedelta(hours=1)
 
-    def update_time(self):
-        self.last_check = datetime.datetime.now()
+    def update_time(self, time: datetime = datetime.datetime.now()):
+        self.last_check = time
 
     def recover_swap_file(self, filename: string, getfile: bool = False):
         """
@@ -40,30 +40,35 @@ class VimSwapFileFinder:
             print(f"Cannot capture swap file {filename}: tempfile cannot be created", flush=True)
 
         finally:
+
+            success = True
+
             try:
                 vim = subprocess.Popen([f'vim', '-r', filename, '-s', scriptfile.name], stderr=subprocess.STDOUT, stdout=FNULL)
                 vim.wait(10)
 
                 if vim.returncode == 0:
-                    content = capturefile.read()
                     print(f"vim recovered. Swap file {filename}", flush=True)
                 else:
                     print(f"vim recover failed. Maybe the file is not valid or the script is not working. Swap file {filename}", flush=True)
-                    content = None
+                    success = False
 
             except subprocess.TimeoutExpired:
                 print(f"vim session timeout. Maybe the file is too large or the script is not working. Swap file {filename}", flush=True)
-                content = None
+                success = False
 
-        if content == None:
-            return None
         scriptfile.close()
+
+        if not success:
+            capturefile.close()
+            return None
         
         if getfile:
             return capturefile
-        
-        capturefile.close()
-        return content
+        else:
+            content = capturefile.read()
+            capturefile.close()
+            return content
     
     def scan_with_callback(self, dir: string, callback, autoclose: bool = True):
         """
