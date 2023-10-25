@@ -2,8 +2,6 @@ import json
 import psutil
 import discord
 import datetime
-import subprocess
-import re
 import sus.swapfinder
 import sus.idfinder
 from   sus.basiclib import *

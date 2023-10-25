@@ -1,7 +1,7 @@
-from collections import namedtuple
+from   collections import namedtuple
 import datetime
 import os
-from pwd import getpwuid
+from   pwd import getpwuid
 import re
 import subprocess
 import string

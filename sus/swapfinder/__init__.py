@@ -1,7 +1,7 @@
-from sus.swapfinder.swapfinder import *
-from sus.basiclib import *
-from sus.idfinder import StudentIDFinder as sidf
-from discord.ext  import tasks, commands
+from   sus.swapfinder.swapfinder import *
+from   sus.basiclib import *
+from   sus.idfinder import StudentIDFinder as sidf
+from   discord.ext  import tasks, commands
 import time
 import discord
 
