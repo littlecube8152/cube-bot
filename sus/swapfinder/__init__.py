@@ -19,15 +19,19 @@ class SwapFinderCog(commands.Cog):
         self.prober.cancel()
 
     @commands.slash_command()
-    async def scan_tmp(self, ctx, delay_hour: int = 1):
+    async def scan_tmp(self, ctx: discord.ApplicationContext, delay_hour: int = 1):
         """
         Perform a scan. Default find by time delayed by 1 hour.
         """
-        channel = self.bot.get_channel(REPORT_CHANNEL_ID)
+        await ctx.defer()
+        
         self.sf.update_time(datetime.datetime.now() - datetime.timedelta(hours=delay_hour))
         flist = self.sf.scan_directory(SCAN_PATH, True)
         self.sf.update_time()
-        await ctx.respond(f"Found {len(flist)} unprotected edit.")
+
+        await ctx.followup.send(f"Found {len(flist)} unprotected edit.")
+        channel = self.bot.get_channel(REPORT_CHANNEL_ID)
+        
         for filename, size, owner, last_modify, preview in flist:
             if size < MAX_PREVIEW_SIZE:
                 await channel.send(f'`{owner}` did some unprotected edit with swap file `{filename}` (size `{convert_bytes(size)}`) at time `{str(last_modify)}`:', file=discord.File(preview.name, filename=filename[:-4]))
