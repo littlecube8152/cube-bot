@@ -16,7 +16,8 @@ class VimSwapFileFinder:
     def __init__(self):
         self.last_check = datetime.datetime.now() - datetime.timedelta(hours=1)
 
-    def update_time(self, time: datetime = datetime.datetime.now()):
+    def update_time(self, time = None):
+        time = time or datetime.datetime.now()
         self.last_check = time
 
     def recover_swap_file(self, filename: string, getfile: bool = False):
