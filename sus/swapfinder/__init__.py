@@ -1,13 +1,22 @@
 from   sus.swapfinder.swapfinder import *
 from   sus.basiclib import *
+from   sus.config import config_handler
 from   sus.idfinder import StudentIDFinder as sidf
 from   discord.ext  import tasks, commands
 import time
 import discord
 
-SCAN_PATH = '/tmp'
-REPORT_CHANNEL_ID = 1164606072024207450
-MAX_PREVIEW_SIZE = 1024 * 1024 * 8   # 8 MB
+# Define and load configurations
+
+SCAN_PATH, REPORT_CHANNEL_ID, MAX_PREVIEW_SIZE = None, None, None
+@config_handler.after_load
+def __load_config():
+    global SCAN_PATH, REPORT_CHANNEL_ID, MAX_PREVIEW_SIZE
+    SCAN_PATH =         config_handler.get_configuration("swapfinder.scan_path")
+    REPORT_CHANNEL_ID = config_handler.get_configuration("swapfinder.report_channel_id")
+    MAX_PREVIEW_SIZE =  config_handler.get_configuration("swapfinder.max_preview_size")   
+
+# Integration with discord
 
 class SwapFinderCog(commands.Cog):
     def __init__(self, bot):

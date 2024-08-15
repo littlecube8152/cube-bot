@@ -2,20 +2,21 @@ import json
 import psutil
 import discord
 import datetime
-import sus.swapfinder
+import sus.config
+from   sus.config import config_handler
 import sus.idfinder
+import sus.swapfinder
 from   sus.basiclib import *
 
-token = ""
+token = None
+
+@config_handler.after_load
+def __load_config():
+    global token
+    token =  config_handler.get_configuration("token")
+
 bot = discord.Bot()
 start_time = datetime.datetime.now()
-
-# Opening Token JSON file
-def load_token():
-    global token
-    token_file = open('config.json')
-    token = json.load(token_file)['token']
-    token_file.close()
 
 def lazy_embed(title, color, section_list = {}, description = None, inline = True):
 
@@ -56,7 +57,6 @@ async def delete(ctx: discord.ApplicationContext, count: int = 0):
     else:
         await ctx.respond(f"You don't have permission to invoke this dangerous command.", ephemeral=True, delete_after=5.0)
 
-
 @bot.slash_command()
 async def botstat(ctx):
 
@@ -92,16 +92,14 @@ async def botstat(ctx):
     
     await ctx.respond(embed=embed)
 
-
 def load_module(module: discord.Cog):
     print(f"Load module {module.__cog_name__}...")
     bot.add_cog(module(bot))
     for c in module.get_commands(module):
         print(f"Registered command {c.name}")
 
-
 def main():
-    load_token()
+    config_handler.load()
     load_module(sus.swapfinder.SwapFinderCog)
     load_module(sus.idfinder.StudentIDCog)
     print(f"Running bot on token {token[:5]}...{token[-5:]}")

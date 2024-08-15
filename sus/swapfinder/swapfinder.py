@@ -4,12 +4,20 @@ import os
 from   pwd import getpwuid
 import re
 import subprocess
-import string
-import tempfile
 import stat
+import string
+from   sus.config import config_handler
+import tempfile
 
-MAX_FILE_SIZE = 1024 * 1024 * 64  # 64 MB
-PREVIEW_SIZE =  400
+PREVIEW_SIZE = None
+MAX_FILE_SIZE = None
+
+@config_handler.after_load
+def __load_config():
+    global PREVIEW_SIZE, MAX_FILE_SIZE
+    PREVIEW_SIZE =  config_handler.get_configuration("swapfinder.preview_size")
+    MAX_FILE_SIZE = config_handler.get_configuration("swapfinder.max_file_size")
+
 SwapContent = namedtuple('SwapContent', ['filename', 'size', 'owner', 'last_modify', 'preview'])
 
 class VimSwapFileFinder:
