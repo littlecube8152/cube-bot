@@ -6,4 +6,6 @@ available_options = [
     ["swapfinder.max_file_size", int, 1024 * 1024 * 64, None],
     ["swapfinder.preview_size", int, 400, None],
     ["clickup.token", str, None, None],
+    ["clickup.mention_id", int, None, None],
+    ["clickup.report_channel_id", int, None, None],
 ]

@@ -7,6 +7,7 @@ from   sus.config import config_handler
 import sus.idfinder
 import sus.swapfinder
 from   sus.basiclib import *
+import sus.clickup
 
 token = None
 
@@ -102,6 +103,7 @@ def main():
     config_handler.load()
     load_module(sus.swapfinder.SwapFinderCog)
     load_module(sus.idfinder.StudentIDCog)
+    load_module(sus.clickup.ClickupCog)
     print(f"Running bot on token {token[:5]}...{token[-5:]}")
     bot.run(token)
 
