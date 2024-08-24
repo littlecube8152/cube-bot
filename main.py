@@ -51,10 +51,14 @@ async def delete(ctx: discord.ApplicationContext, count: int = 0):
     if ctx.author.id == 582151572646133770:
         reply = await ctx.respond(f"Deleting...", ephemeral=True)
         deleted = 0
-        async for msg in ctx.channel.history(limit=count, before=ctx.message):
-            deleted += 1
-            await msg.delete()
-        await reply.edit_original_response(content=f"Deleted **{deleted}** message(s). Shhhh!", delete_after=5.0)
+        try:
+            async for msg in ctx.channel.history(limit=count, before=ctx.message):
+                await msg.delete()
+                deleted += 1
+        except discord.HTTPException as e:
+            print(f"{unix_to_datetime(datetime.datetime.now().timestamp())} Upon deleting message, an HTTP exception occured (status {e.status})")
+        finally:
+            await reply.edit_original_response(content=f"Deleted **{deleted}** message(s). Shhhh!", delete_after=5.0)
     else:
         await ctx.respond(f"You don't have permission to invoke this dangerous command.", ephemeral=True, delete_after=5.0)
 
