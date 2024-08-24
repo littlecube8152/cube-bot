@@ -21,8 +21,11 @@ def convert_time(t):
 def unix_to_date(t):
     return datetime.datetime.fromtimestamp(t).strftime("%b %d")
 
+def unix_to_time(t):
+    return datetime.datetime.fromtimestamp(t).strftime("%H:%M")
+
 def unix_to_datetime(t):
-    return datetime.datetime.fromtimestamp(t).strftime("%b %d %H:%M")
+    return unix_to_date(t) + ' ' + unix_to_time(t)
 
 def escape_url(s):
     "Heuristically put angle brackets (<>) around urls. Useful to send a message without embed (preview)."

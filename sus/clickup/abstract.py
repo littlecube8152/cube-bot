@@ -1,6 +1,8 @@
 from __future__ import annotations
-import os
+
+import json
 import requests
+import os
 from sus.config import config_handler
 
 API_ENDPOINT = "https://api.clickup.com/api/v2/"
@@ -26,6 +28,7 @@ class ClickupTask:
     def __init__(self, data):
         self.id: str = data["id"]
         self.name: str = data["name"]
+        self.tags: list[str] = [tag["name"] for tag in data["tags"]]
         self.text_content: str = data["text_content"]
         self.status: ClickupTaskStatus = ClickupTaskStatus(data["status"])
         # We all divide by 1000 to match with Python's UNIX time format

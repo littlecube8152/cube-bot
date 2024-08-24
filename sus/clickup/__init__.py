@@ -1,13 +1,20 @@
 """Integration with ClickUp."""
 
 from sus.clickup.abstract import *
-from sus.basiclib import unix_to_datetime, escape_url
+from sus.basiclib import unix_to_datetime, unix_to_time
 from discord.ext import tasks, commands
 import asyncio
 import datetime
 import discord
 
 REPORT_CHANNEL_ID, MENTION_ID = None, None
+
+# Special tags
+T_COURSE = "course"
+T_ASSIGNMENT = "assignment"
+T_EXAM = "exam"
+T_EVENT = "event"
+T_MEETING = "meeting"
 
 
 @config_handler.after_load
@@ -28,17 +35,42 @@ class ClickupCog(commands.Cog):
     @classmethod
     def next_morning(cls, t: datetime.datetime):
         """Produce a datetime for the next moring (8 o'clock)"""
-        return datetime.datetime(t.year, t.month, t.day + (1 if t.hour >= 8 else 0), 8, 0, 0, 0)
+        if t.hour >= 7:
+            t += datetime.timedelta(days=1)
+        return datetime.datetime(t.year, t.month, t.day, 7, 0, 0, 0)
 
     def cog_unload(self):
         self.prober.cancel()
 
     @classmethod
-    def stringify_tasks(cls, task_list: list[ClickupTask]) -> str:
+    def stringify_tasks(cls, task_list: list[ClickupTask], header) -> str:
         msg = ""
         for task in task_list:
-            due_date = f"Due at **`{unix_to_datetime(task.due_date)}`**" if task.due_date else "**No Due!**"
-            msg += f"- :page_facing_up: {due_date}: [`{task.id}`](<{task.url}>) {task.name}\n"
+            link = f"[`{task.id}`](<{task.url}>)"
+
+            if T_ASSIGNMENT in task.tags:
+                emoji = "pencil"
+            elif T_EXAM in task.tags:
+                emoji = "scroll"
+            elif T_EVENT in task.tags:
+                emoji = "jigsaw"
+            elif T_MEETING in task.tags:
+                emoji = "fire"
+            elif T_COURSE in task.tags:
+                emoji = "book"
+            else:
+                emoji = "page_facing_up"
+
+            if T_COURSE in task.tags:
+                due = f"**`{unix_to_time(task.due_date)}`**"
+            else:
+                due = f"Due at **`{unix_to_datetime(task.due_date)}`**" if task.due_date else "**No Due!**"
+
+            msg += (f"- :{emoji}: {due}: {link} {task.name}\n")
+
+        if len(msg):
+            msg = header + msg
+
         return msg
 
     def parse_tasks(self, truncate_num: int = 10) -> str:
@@ -47,10 +79,15 @@ class ClickupCog(commands.Cog):
         tasks.sort(key=lambda x: (0 if x.due_date else 1, x.due_date))
 
         # Custom logic of categorize tasks
+        course: list[ClickupTask] = []
         unreleased: list[ClickupTask] = []
         in_progress: list[ClickupTask] = []
         done: list[ClickupTask] = []
         for task in tasks:
+            if T_COURSE in task.tags:
+                if datetime.datetime.fromtimestamp(task.due_date).day != datetime.datetime.now().day:
+                    continue
+                course.append(task)
             if task.status.type == "open":
                 unreleased.append(task)
             elif task.status.type == "custom":
@@ -58,10 +95,16 @@ class ClickupCog(commands.Cog):
             elif task.status.type == "done":
                 done.append(task)
 
-        return ("## :mag: Opened\n" + 
-                self.stringify_tasks(unreleased[:truncate_num]) + 
-                "## :chart_with_upwards_trend: In Progress\n" + 
-                self.stringify_tasks(in_progress[:truncate_num]))
+        msg = (self.stringify_tasks(course,
+                                     "## :teacher: Today's Schedule\n") +
+                self.stringify_tasks(unreleased[:truncate_num],
+                                     "## :mag: Opened\n") +
+                self.stringify_tasks(in_progress[:truncate_num],
+                                     "## :chart_with_upwards_trend: In Progress\n"))
+        if msg == "":
+            msg = "## :white_check_mark: A Day Off!"
+
+        return msg
 
     @commands.slash_command()
     async def list_tasks(self, ctx: discord.ApplicationContext, truncate_num: int = 10):
@@ -76,9 +119,9 @@ class ClickupCog(commands.Cog):
         await asyncio.sleep(max(0, (self.next_reminder - datetime.datetime.now()).total_seconds()))
         channel = self.bot.get_channel(REPORT_CHANNEL_ID)
         user = await self.bot.fetch_user(MENTION_ID)
-        msg = (f"{user.mention}\n" + 
+        msg = (f"{user.mention}\n" +
                f"# Daily Reminder {datetime.datetime.now().strftime('%b %d')}\n" +
-                self.parse_tasks())
+               self.parse_tasks())
         await channel.send(msg, suppress=True)
         self.next_reminder = self.next_morning(self.next_reminder)
 

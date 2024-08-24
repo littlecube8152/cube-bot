@@ -4,6 +4,9 @@
 # Python caches
 __pycache__
 
+# Linear API integration: deprecated
+linear
+
 # Token
 config.json
 extern.json
