@@ -16,6 +16,9 @@ T_EXAM = "exam"
 T_EVENT = "event"
 T_MEETING = "meeting"
 
+NUM_TRUNC = 20
+NUM_BATCH = 10
+
 
 @config_handler.after_load
 def __load_config():
@@ -43,13 +46,15 @@ class ClickupCog(commands.Cog):
         self.prober.cancel()
 
     @classmethod
-    def stringify_tasks(cls, task_list: list[ClickupTask], header) -> str:
+    def stringify_tasks(cls, task_list: list[ClickupTask], header: str, enable_title: bool) -> str:
         msg = ""
         for task in task_list:
             link = f"[`{task.id}`](<{task.url}>)"
 
+            due = "At\t"
             if T_ASSIGNMENT in task.tags:
                 emoji = "pencil"
+                due = "Due "
             elif T_EXAM in task.tags:
                 emoji = "scroll"
             elif T_EVENT in task.tags:
@@ -62,18 +67,36 @@ class ClickupCog(commands.Cog):
                 emoji = "page_facing_up"
 
             if T_COURSE in task.tags:
-                due = f"**`{unix_to_time(task.due_date)}`**"
+                due += f"**`{unix_to_time(task.due_date)}`**"
             else:
-                due = f"Due at **`{unix_to_datetime(task.due_date)}`**" if task.due_date else "**No Due!**"
+                delta = datetime.datetime.fromtimestamp(
+                    task.due_date) - datetime.datetime.now()
+                # if delta < DELTA_IMPORTANT:
+                if delta.days == 0:
+                    ddays = f""
+                else:
+                    ddays = f"**`{delta.days}`**`d`"
+
+                if delta.seconds // 3600 == 0 and delta.days < 0:
+                    dhour = f"**`<1`**`h`"
+                elif delta.seconds // 3600 == 0:
+                    dhour = f""
+                else:
+                    dhour = f"**`{delta.seconds // 3600}`**`h`"
+
+                due += f"{ddays}{dhour}- `{unix_to_datetime(
+                    task.due_date)}`" if task.due_date else "**No Due!**"
+                # else:
+                # due += f"**`{unix_to_datetime(task.due_date)}`**" if task.due_date else "**No Due!**"
 
             msg += (f"- :{emoji}: {due}: {link} {task.name}\n")
 
-        if len(msg):
+        if len(msg) and enable_title:
             msg = header + msg
 
         return msg
 
-    def parse_tasks(self, truncate_num: int = 10) -> str:
+    def parse_tasks(self, start: int = 0, end: int = NUM_BATCH, enable_title: bool = True) -> str:
         data = ClickupData()
         tasks = data.get_all_tasks()
         tasks.sort(key=lambda x: (0 if x.due_date else 1, x.due_date))
@@ -88,41 +111,43 @@ class ClickupCog(commands.Cog):
                 if datetime.datetime.fromtimestamp(task.due_date).day != datetime.datetime.now().day:
                     continue
                 course.append(task)
-            if task.status.type == "open":
-                unreleased.append(task)
-            elif task.status.type == "custom":
+            elif task.status.type == "open" or task.status.type == "custom":
+                # unreleased.append(task)
                 in_progress.append(task)
             elif task.status.type == "done":
                 done.append(task)
 
-        msg = (self.stringify_tasks(course,
-                                     "## :teacher: Today's Schedule\n") +
-                self.stringify_tasks(unreleased[:truncate_num],
-                                     "## :mag: Opened\n") +
-                self.stringify_tasks(in_progress[:truncate_num],
-                                     "## :chart_with_upwards_trend: In Progress\n"))
+        msg = (self.stringify_tasks(course[start:end],
+                                    "## :teacher: Today's Schedule\n", enable_title) +
+               # self.stringify_tasks(unreleased[:truncate_num],
+               #                      "## :mag: Opened\n") +
+               self.stringify_tasks(in_progress[start:end],
+                                    "## :chart_with_upwards_trend: In Progress\n", enable_title))
         if msg == "":
             msg = "## :white_check_mark: A Day Off!"
 
         return msg
 
     @commands.slash_command()
-    async def list_tasks(self, ctx: discord.ApplicationContext, truncate_num: int = 10):
+    async def list_tasks(self, ctx: discord.ApplicationContext, truncate_num: int = NUM_TRUNC):
         """
         List all tasks from a user.
         """
         await ctx.defer()
-        await ctx.followup.send(self.parse_tasks(truncate_num))
+        for i in range(0, truncate_num, NUM_BATCH):
+            await ctx.followup.send(self.parse_tasks(i, min(i + NUM_BATCH, truncate_num)))
 
     @tasks.loop(hours=23.9)
     async def prober(self):
         await asyncio.sleep(max(0, (self.next_reminder - datetime.datetime.now()).total_seconds()))
         channel = self.bot.get_channel(REPORT_CHANNEL_ID)
         user = await self.bot.fetch_user(MENTION_ID)
-        msg = (f"{user.mention}\n" +
-               f"# Daily Reminder {datetime.datetime.now().strftime('%b %d')}\n" +
-               self.parse_tasks())
-        await channel.send(msg, suppress=True)
+        header = (f"{user.mention}\n" +
+                  f"# Daily Reminder {datetime.datetime.now().strftime('%b %d')}\n")
+        
+        await channel.send(header + self.parse_tasks(0, min(NUM_BATCH, NUM_TRUNC)), suppress=True)
+        for i in range(NUM_BATCH, NUM_TRUNC, NUM_BATCH):
+            await channel.send(self.parse_tasks(i, min(i + NUM_BATCH, NUM_TRUNC), enable_title=False), suppress=True)
         self.next_reminder = self.next_morning(self.next_reminder)
 
     @prober.before_loop
