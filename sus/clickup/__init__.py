@@ -110,7 +110,7 @@ class ClickupCog(commands.Cog):
 
     def parse_tasks(self, start: int = 0, end: int = NUM_BATCH, enable_title: bool = True) -> str:
         data = ClickupData()
-        tasks = data.get_all_tasks()
+        tasks = data.get_tasks()
         tasks.sort(key=lambda x: (0 if x.due_date else 1, x.due_date))
 
         # Custom logic of categorize tasks
