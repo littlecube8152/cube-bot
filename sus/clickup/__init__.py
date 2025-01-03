@@ -47,6 +47,30 @@ class ClickupCog(commands.Cog):
 
     @classmethod
     def stringify_tasks(cls, task_list: list[ClickupTask], header: str, enable_title: bool) -> str:
+
+        def get_timedelta(due_time: float):
+            delta = datetime.datetime.fromtimestamp(due_time) - datetime.datetime.now()
+            
+            negative = False
+            if delta < datetime.timedelta(seconds=0):
+                negative = True
+                delta = -delta
+
+            # if delta < DELTA_IMPORTANT:
+            if delta.days == 0:
+                ddays = f""
+            else:
+                ddays = f"**`{delta.days}`**`d`"
+
+            if delta.seconds // 3600 == 0 and delta.days == 0:
+                dhour = f"**`<1`**`h`"
+            elif delta.seconds // 3600 == 0:
+                dhour = f""
+            else:
+                dhour = f"**`{delta.seconds // 3600}`**`h`"
+
+            return f"{'-' if negative else ''}{ddays}{dhour} - `{unix_to_datetime(due_time)}`"
+
         msg = ""
         for task in task_list:
             link = f"[`{task.id}`](<{task.url}>)"
@@ -67,27 +91,15 @@ class ClickupCog(commands.Cog):
                 emoji = "page_facing_up"
 
             if T_COURSE in task.tags:
-                due += f"**`{unix_to_time(task.due_date)}`**"
+                if task.due_date is not None:
+                    due += f"**`{unix_to_time(task.due_date)}`**"
+                else:
+                    due += "**\"What do you mean the course has no time?\"**"
             else:
-                delta = datetime.datetime.fromtimestamp(
-                    task.due_date) - datetime.datetime.now()
-                # if delta < DELTA_IMPORTANT:
-                if delta.days == 0:
-                    ddays = f""
+                if task.due_date is not None:
+                    due += get_timedelta(task.due_date)
                 else:
-                    ddays = f"**`{delta.days}`**`d`"
-
-                if delta.seconds // 3600 == 0 and delta.days < 0:
-                    dhour = f"**`<1`**`h`"
-                elif delta.seconds // 3600 == 0:
-                    dhour = f""
-                else:
-                    dhour = f"**`{delta.seconds // 3600}`**`h`"
-
-                due += f"{ddays}{dhour}- `{unix_to_datetime(
-                    task.due_date)}`" if task.due_date else "**No Due!**"
-                # else:
-                # due += f"**`{unix_to_datetime(task.due_date)}`**" if task.due_date else "**No Due!**"
+                    due += "**No Due!**"
 
             msg += (f"- :{emoji}: {due}: {link} {task.name}\n")
 
@@ -129,7 +141,7 @@ class ClickupCog(commands.Cog):
         return msg
 
     @commands.slash_command()
-    async def list_tasks(self, ctx: discord.ApplicationContext, truncate_num: int = NUM_TRUNC):
+    async def list_tasks(self, ctx: discord.ApplicationContext, truncate_num: int = NUM_BATCH):
         """
         List all tasks from a user.
         """
