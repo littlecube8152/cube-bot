@@ -8,17 +8,23 @@ from sus.config import config_handler
 API_ENDPOINT = "https://api.clickup.com/api/v2/"
 API_TOKEN = None
 
+# TODO: handle deletion of all objects
+# It is not very useful under the context of this bot, but it is nice to have it for completeness
+
+
 @config_handler.after_load
 def __load_config():
     global API_TOKEN
     API_TOKEN = config_handler.get_configuration("clickup.token")
 
+
 def call_method(method: str, params: dict = {}):
-    r = requests.get(os.path.join(API_ENDPOINT, method), params=params, headers={"Authorization": API_TOKEN})
+    r = requests.get(os.path.join(API_ENDPOINT, method),
+                     params=params, headers={"Authorization": API_TOKEN})
     if not r.ok:
         r.raise_for_status()
     return r
-    
+
 
 class ClickupTaskStatus:
     def __init__(self, data):
@@ -28,6 +34,7 @@ class ClickupTaskStatus:
         self.orderindex: int = int(data["orderindex"])
         self.color: str = data["color"]
 
+
 class ClickupTask:
     def __init__(self, data):
         self.id: str = data["id"]
@@ -35,17 +42,21 @@ class ClickupTask:
         self.tags: list[str] = [tag["name"] for tag in data["tags"]]
         self.text_content: str = data["text_content"]
         self.status: ClickupTaskStatus = ClickupTaskStatus(data["status"])
+
         # We all divide by 1000 to match with Python's UNIX time format
         self.date_created: float = int(data["date_created"]) / 1000
         self.date_updated: float = int(data["date_updated"]) / 1000
         self.due_date: float | None = int(data["due_date"]) / 1000 if data["due_date"] else None
+
         self.parent: int | None = data["parent"]
+        self.parent_task: ClickupTask | None = None
         self.url: str = data["url"]
-        self.list: ClickupList = ClickupList(data["list"], defer=True) 
+        self.list: ClickupList = ClickupList(data["list"], defer=True)
         self.subtask: list[ClickupTask] = []
 
     def add_child(self, task: ClickupTask):
         self.subtask.append(task)
+
 
 class ClickupList:
     def __init__(self, data, defer=False):
@@ -53,36 +64,43 @@ class ClickupList:
         self.name: str = data["name"]
         self.tasks: list[ClickupTask] = []
         self.expanded_tasks: list[ClickupTask] = []
+        self.status_list: list[ClickupTaskStatus] = []
         if not defer:
             self.update()
 
     def update(self):
-        task_data = {}
+        list_data = call_method(os.path.join("list", str(self.id))).json()
+        self.name = list_data["name"]
+        self.status_list = [ClickupTaskStatus(status) for status in list_data["statuses"]]
 
         # It is better to reconstruct all tasks at this point, since tasks tend to come in large numbers
         # Using the API call we can save many calls (as internet is probably the bottleneck)
         self.expanded_tasks = []
         page = 0
         while True:
-            task_data = call_method(os.path.join("list", str(self.id), "task"),
-                                     {"page": str(page), "order_by": "due_date", "subtasks": "true"}).json()
+            task_data = (call_method(os.path.join("list", str(self.id), "task"),
+                                     {"page": page, 
+                                      "order_by": "due_date", 
+                                      "subtasks": True,
+                                      "statuses": [status.name for status in self.status_list if status.type != "done"]})
+                         .json())
             self.expanded_tasks += [ClickupTask(ele) for ele in task_data["tasks"]]
             if task_data["last_page"]:
                 break
-        self.tasks = [task for task in self.expanded_tasks if task.parent is None]
+        self.tasks = [
+            task for task in self.expanded_tasks if task.parent is None]
         task_map = {task.id: task for task in self.tasks}
         for task in self.expanded_tasks:
             if task.parent:
-                task_map[task.parent].add_child(task)
-        
+                task.parent_task = task_map[task.parent]
+                task.parent_task.add_child(task)
+
 
 class ClickupSpace:
     def __init__(self, data, defer=False):
         self.id: int = int(data["id"])
         self.name: str = data["name"]
         self.lists: list[ClickupList] = []
-        # TODO: considering whether to add back this, since it is unhelpful
-        # self.status_list: list[ClickupTaskStatus] = [ClickupTaskStatus(status) for status in data["statuses"]]
 
         if not defer:
             self.update()
@@ -90,7 +108,6 @@ class ClickupSpace:
     def __eq__(self, rhs: ClickupSpace):
         assert isinstance(rhs, ClickupSpace)
         return self.id == rhs.id
-
 
     def update(self):
         list_data = call_method(os.path.join("space", str(self.id), "list")).json()
@@ -101,6 +118,7 @@ class ClickupSpace:
                 self.lists.append(fetched_list)
         for list in self.lists:
             list.update()
+
 
 class ClickupTeam:
     def __init__(self, data, defer=False):
@@ -130,6 +148,7 @@ class ClickupTeam:
         for space in self.spaces:
             space.update()
 
+
 class ClickupData:
     def __init__(self, defer=False):
         """
@@ -143,10 +162,15 @@ class ClickupData:
 
     def get_tasks(self) -> list[ClickupTask]:
         return [task for team in self.teams for space in team.spaces for list in space.lists for task in list.tasks]
-    
-    def get_expanded_tasks(self) -> list[ClickupTask]:
-        return [task for team in self.teams for space in team.spaces for list in space.lists for task in list.expanded_tasks]
-    
+
+    def get_expanded_tasks(self, max_child: int) -> list[ClickupTask]:
+        return sum([[task] + task.subtask[:max_child]
+                    for team in self.teams
+                    for space in team.spaces
+                    for list in space.lists
+                    for task in list.tasks],
+                   [])
+
     def update(self):
         team_data = call_method("team").json()
         fetched_teams = [ClickupTeam(ele, True) for ele in team_data["teams"]]
@@ -156,6 +180,3 @@ class ClickupData:
         self.tasks = []
         for team in self.teams:
             team.update()
-        
-
-                    
