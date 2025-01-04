@@ -147,13 +147,21 @@ class ClickupCog(commands.Cog):
 
         return msg
 
+    async def async_parse_tasks(self, truncate: int = NUM_TRUNC) -> list[str]:
+        """
+        Async wrapper for parse_tasks.
+        """
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, self.parse_tasks, truncate)
+        return result
+
     @commands.slash_command()
     async def list_tasks(self, ctx: discord.ApplicationContext, truncate: int = NUM_TRUNC):
         """
         List all tasks from a user.
         """
         await ctx.defer()
-        task_msg = self.parse_tasks(truncate=truncate)
+        task_msg = await self.async_parse_tasks(truncate=truncate)
 
         current_msg = ""
         for i in range(len(task_msg)):
@@ -176,7 +184,7 @@ class ClickupCog(commands.Cog):
         user = await self.bot.fetch_user(MENTION_ID)
 
         task_msg = [f"{user.mention}\n",
-                    f"# Daily Reminder {datetime.datetime.now().strftime('%b %d')}\n"] + self.parse_tasks()
+                    f"# Daily Reminder {datetime.datetime.now().strftime('%b %d')}\n"] + (await self.async_parse_tasks())
         current_msg = ""
         for i in range(len(task_msg)):
             # Just to be safe
