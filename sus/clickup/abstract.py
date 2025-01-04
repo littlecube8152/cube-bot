@@ -87,8 +87,7 @@ class ClickupList:
             self.expanded_tasks += [ClickupTask(ele) for ele in task_data["tasks"]]
             if task_data["last_page"]:
                 break
-        self.tasks = [
-            task for task in self.expanded_tasks if task.parent is None]
+        self.tasks = [task for task in self.expanded_tasks if task.parent is None]
         task_map = {task.id: task for task in self.tasks}
         for task in self.expanded_tasks:
             if task.parent:
@@ -112,10 +111,8 @@ class ClickupSpace:
     def update(self):
         list_data = call_method(os.path.join("space", str(self.id), "list")).json()
 
-        fetched_lists: list[ClickupList] = [ClickupList(ele, True) for ele in list_data["lists"]]
-        for fetched_list in fetched_lists:
-            if fetched_list not in self.lists:
-                self.lists.append(fetched_list)
+        self.lists: list[ClickupList] = [ClickupList(ele, True) for ele in list_data["lists"]]
+        
         for list in self.lists:
             list.update()
 
@@ -140,10 +137,7 @@ class ClickupTeam:
 
     def update(self):
         space_data = call_method(os.path.join("team", str(self.id), "space")).json()
-        fetched_spaces = [ClickupSpace(ele, True) for ele in space_data["spaces"]]
-        for fetched_space in fetched_spaces:
-            if fetched_space not in self.spaces:
-                self.spaces.append(fetched_space)
+        self.spaces = [ClickupSpace(ele, True) for ele in space_data["spaces"]]
 
         for space in self.spaces:
             space.update()
@@ -173,10 +167,6 @@ class ClickupData:
 
     def update(self):
         team_data = call_method("team").json()
-        fetched_teams = [ClickupTeam(ele, True) for ele in team_data["teams"]]
-        for fetched_team in fetched_teams:
-            if fetched_team not in self.teams:
-                self.teams.append(fetched_team)
-        self.tasks = []
+        self.teams = [ClickupTeam(ele, True) for ele in team_data["teams"]]
         for team in self.teams:
             team.update()
