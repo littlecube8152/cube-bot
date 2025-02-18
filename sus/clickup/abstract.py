@@ -51,7 +51,7 @@ class ClickupTask:
         self.parent: int | None = data["parent"]
         self.parent_task: ClickupTask | None = None
         self.url: str = data["url"]
-        self.list: ClickupList = ClickupList(data["list"], defer=True)
+        # self.list: ClickupList = ClickupList(data["list"], , defer=True)
         self.subtask: list[ClickupTask] = []
 
     def add_child(self, task: ClickupTask):
@@ -59,8 +59,9 @@ class ClickupTask:
 
 
 class ClickupList:
-    def __init__(self, data, defer=False):
+    def __init__(self, data, user_id, defer=False):
         self.id: int = int(data["id"])
+        self.user_id: int = user_id
         self.name: str = data["name"]
         self.tasks: list[ClickupTask] = []
         self.expanded_tasks: list[ClickupTask] = []
@@ -82,23 +83,29 @@ class ClickupList:
                                      {"page": page, 
                                       "order_by": "due_date", 
                                       "subtasks": True,
-                                      "statuses": [status.name for status in self.status_list if status.type != "done"]})
+                                      "assignees": [self.user_id, self.user_id], # force it to be an array
+                                      "statuses": [status.name for status in self.status_list if status.type not in ["done", "closed"]]})
                          .json())
             self.expanded_tasks += [ClickupTask(ele) for ele in task_data["tasks"]]
             if task_data["last_page"]:
                 break
         self.tasks = [task for task in self.expanded_tasks if task.parent is None]
-        task_map = {task.id: task for task in self.tasks}
+        task_map = {task.id: task for task in self.expanded_tasks}
         for task in self.expanded_tasks:
             if task.parent:
-                task.parent_task = task_map[task.parent]
-                task.parent_task.add_child(task)
+                try:
+                    task.parent_task = task_map[task.parent]
+                    task.parent_task.add_child(task)
+                except KeyError:
+                    print(f"Task {task} has unaccessible parent {task.parent}")
+                    pass
 
 
 class ClickupSpace:
-    def __init__(self, data, defer=False):
+    def __init__(self, data, user_id, defer=False):
         self.id: int = int(data["id"])
         self.name: str = data["name"]
+        self.user_id: int = user_id
         self.lists: list[ClickupList] = []
 
         if not defer:
@@ -111,14 +118,14 @@ class ClickupSpace:
     def update(self):
         list_data = call_method(os.path.join("space", str(self.id), "list")).json()
 
-        self.lists: list[ClickupList] = [ClickupList(ele, True) for ele in list_data["lists"]]
+        self.lists: list[ClickupList] = [ClickupList(ele, self.user_id, True) for ele in list_data["lists"]]
         
         for list in self.lists:
             list.update()
 
 
 class ClickupTeam:
-    def __init__(self, data, defer=False):
+    def __init__(self, data, user_id, defer=False):
         """
         Initialize a ClickUp team with the data.
         `data` must contain the field id and name.
@@ -127,6 +134,7 @@ class ClickupTeam:
         """
         self.id: int = int(data["id"])
         self.name: str = data["name"]
+        self.user_id: int = user_id
         self.spaces: list[ClickupSpace] = []
         if not defer:
             self.update()
@@ -137,7 +145,7 @@ class ClickupTeam:
 
     def update(self):
         space_data = call_method(os.path.join("team", str(self.id), "space")).json()
-        self.spaces = [ClickupSpace(ele, True) for ele in space_data["spaces"]]
+        self.spaces = [ClickupSpace(ele, self.user_id, True) for ele in space_data["spaces"]]
 
         for space in self.spaces:
             space.update()
@@ -151,6 +159,7 @@ class ClickupData:
         @params defer: Whether the data fetching is deferred.
         """
         self.teams: list[ClickupTeam] = []
+        self.user_id: int
         if not defer:
             self.update()
 
@@ -166,7 +175,9 @@ class ClickupData:
                    [])
 
     def update(self):
+        user_data = call_method("user").json()
+        self.user_id = user_data["user"]["id"]
         team_data = call_method("team").json()
-        self.teams = [ClickupTeam(ele, True) for ele in team_data["teams"]]
+        self.teams = [ClickupTeam(ele, self.user_id, True) for ele in team_data["teams"]]
         for team in self.teams:
             team.update()
